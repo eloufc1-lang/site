@@ -1,232 +1,145 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Controle de Faltas</title>
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  padding: 20px;
-}
-h1, h2 {
-  color: #2c3e50;
-}
-.box {
-  background: #fff;
-  padding: 15px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-}
-input, button, select {
-  padding: 8px;
-  margin: 6px 0;
-  width: 100%;
-}
-button {
-  background: #3498db;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-.logout {
-  background: #e74c3c;
-}
-.hidden {
-  display: none;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-th {
-  background: #ecf0f1;
-}
-.alerta {
-  color: #c0392b;
-  font-weight: bold;
-  font-size: 14px;
-}
-</style>
-</head>
-
-<body>
-
-<!-- LOGIN -->
-<div id="loginBox" class="box">
-  <h1>🔐 Acesso ao Sistema</h1>
-
-  <input type="text" id="usuario" placeholder="Usuário">
-  <input type="password" id="senha" placeholder="Senha">
-  <button onclick="login()">Entrar</button>
-
-  <p class="alerta">
-    Solicite acesso com o coordenador <strong>Misael Soares</strong>
-  </p>
-</div>
-
-<!-- SISTEMA -->
-<div id="sistema" class="hidden">
-
-  <button class="logout" onclick="logout()">Sair</button>
-
-  <h1>📋 Registro de Faltas</h1>
-
-  <form id="formFalta" class="box">
-    <input type="text" id="professor" placeholder="Professor" required>
-    <input type="text" id="disciplina" placeholder="Disciplina" required>
-    <input type="date" id="data" required>
-    <input type="text" id="motivo" placeholder="Motivo">
-    <input type="text" id="substituto" placeholder="Substituto">
-    <button type="submit">Registrar Falta</button>
-  </form>
-
-  <h2>📊 Faltas Registradas</h2>
-  <table class="box">
-    <thead>
-      <tr>
-        <th>Professor</th>
-        <th>Disciplina</th>
-        <th>Data</th>
-        <th>Motivo</th>
-        <th>Substituto</th>
-      </tr>
-    </thead>
-    <tbody id="listaFaltas"></tbody>
-  </table>
-
-  <!-- ADMIN -->
-  <div id="adminArea" class="box hidden">
-    <h2>👑 Criar Usuário</h2>
-
-    <input type="text" id="novoUsuario" placeholder="Usuário">
-    <input type="password" id="novaSenha" placeholder="Senha">
-    <input type="text" id="novoNome" placeholder="Nome completo">
-
-    <select id="novoPerfil">
-      <option value="professor">Professor</option>
-      <option value="admin">Admin</option>
-    </select>
-
-    <button onclick="criarUsuario()">Criar Usuário</button>
-  </div>
-
-</div>
+<!-- MENSAGEM DE FEEDBACK -->
+<p id="msg" class="alerta"></p>
 
 <script>
-const API = "SUA_URL_AQUI";
+document.addEventListener("DOMContentLoaded", () => {
 
-let usuarios = [];
-let usuarioLogado = null;
+  const API = "https://script.google.com/macros/s/AKfycbxr6OZ6IiufWCZNfv49p6pLpeyw_NhCapUVRxxKZGLBeMRz9dBGiB_YTPyYdy1fSQ0JMw/exec";
 
-/* CARREGAR USUÁRIOS */
-fetch(API + "?acao=usuarios")
-  .then(r => r.json())
-  .then(d => usuarios = d);
+  let usuarios = [];
+  let usuarioLogado = null;
 
-/* LOGIN */
-function login() {
-  const u = usuario.value;
-  const s = senha.value;
+  const msg = document.getElementById("msg");
+  const btnLogin = document.getElementById("btnLogin");
 
-  const encontrado = usuarios.find(x => x.usuario === u && x.senha === s);
-
-  if (!encontrado) {
-    alert("Usuário ou senha inválidos");
-    return;
+  function mostrarMsg(texto) {
+    msg.innerText = texto;
   }
 
-  usuarioLogado = encontrado;
-  sessionStorage.setItem("usuario", JSON.stringify(encontrado));
-  mostrarSistema();
-}
+  /* ===== CARREGAR USUÁRIOS ===== */
+  btnLogin.disabled = true;
+  btnLogin.innerText = "Carregando...";
 
-function mostrarSistema() {
-  loginBox.classList.add("hidden");
-  sistema.classList.remove("hidden");
-
-  const u = JSON.parse(sessionStorage.getItem("usuario"));
-  usuarioLogado = u;
-
-  if (u.perfil === "admin") {
-    adminArea.classList.remove("hidden");
-  } else {
-    professor.value = u.nome;
-    professor.disabled = true;
-  }
-
-  carregarFaltas();
-}
-
-function logout() {
-  sessionStorage.clear();
-  location.reload();
-}
-
-if (sessionStorage.getItem("usuario")) {
-  mostrarSistema();
-}
-
-/* REGISTRAR FALTA */
-document.getElementById("formFalta").addEventListener("submit", e => {
-  e.preventDefault();
-
-  const dados = {
-    professor: professor.value,
-    disciplina: disciplina.value,
-    data: data.value,
-    motivo: motivo.value,
-    substituto: substituto.value
-  };
-
-  fetch(API, {
-    method: "POST",
-    body: JSON.stringify(dados)
-  }).then(() => {
-    alert("Falta registrada!");
-    e.target.reset();
-    if (usuarioLogado.perfil === "professor") {
-      professor.value = usuarioLogado.nome;
-    }
-    carregarFaltas();
-  });
-});
-
-/* LISTAR FALTAS */
-function carregarFaltas() {
-  fetch(API)
+  fetch(API + "?acao=usuarios")
     .then(r => r.json())
     .then(d => {
-      listaFaltas.innerHTML = "";
-      d.forEach(f => {
-        listaFaltas.innerHTML += `
-          <tr>
-            <td>${f.professor}</td>
-            <td>${f.disciplina}</td>
-            <td>${f.data}</td>
-            <td>${f.motivo}</td>
-            <td>${f.substituto}</td>
-          </tr>
-        `;
-      });
+      usuarios = d;
+      btnLogin.disabled = false;
+      btnLogin.innerText = "Entrar";
+    })
+    .catch(err => {
+      mostrarMsg("Erro ao carregar usuários");
+      console.error(err);
     });
-}
 
-/* ADMIN */
-function criarUsuario() {
-  const dados = {
-    acao: "criarUsuario",
-    usuario: novoUsuario.value,
-    senha: novaSenha.value,
-    perfil: novoPerfil.value,
-    nome: novoNome.value
+  /* ===== LOGIN ===== */
+  window.login = function () {
+    const u = document.getElementById("usuario").value;
+    const s = document.getElementById("senha").value;
+
+    const encontrado = usuarios.find(x => x.usuario === u && x.senha === s);
+
+    if (!encontrado) {
+      mostrarMsg("Usuário ou senha inválidos");
+      return;
+    }
+
+    mostrarMsg("");
+    usuarioLogado = encontrado;
+    sessionStorage.setItem("usuario", JSON.stringify(encontrado));
+    mostrarSistema();
   };
 
-  fetch(API, {
-    method: "POST",
-    body: JSON.stringify(dados)
+  function mostrarSistema() {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("sistema").classList.remove("hidden");
+
+    const u = JSON.parse(sessionStorage.getItem("usuario"));
+    usuarioLogado = u;
+
+    if (u.perfil === "admin") {
+      document.getElementById("adminArea").classList.remove("hidden");
+    } else {
+      const prof = document.getElementById("professor");
+      prof.value = u.nome;
+      prof.disabled = true;
+    }
+
+    carregarFaltas();
+  }
+
+  window.logout = function () {
+    sessionStorage.clear();
+    location.reload();
+  };
+
+  if (sessionStorage.getItem("usuario")) {
+    mostrarSistema();
+  }
+
+  /* ===== REGISTRAR FALTA ===== */
+  document.getElementById("formFalta").addEventListener("submit", e => {
+    e.preventDefault();
+
+    const dados = {
+      professor: professor.value,
+      disciplina: disciplina.value,
+      data: data.value,
+      motivo: motivo.value,
+      substituto: substituto.value
+    };
+
+    fetch(API, {
+      method: "POST",
+      body: JSON.stringify(dados)
+    }).then(() => {
+      mostrarMsg("Falta registrada com sucesso!");
+      e.target.reset();
+      if (usuarioLogado.perfil === "professor") {
+        professor.value = usuarioLogado.nome;
+      }
+      carregarFaltas();
+    });
+  });
+
+  /* ===== LISTAR FALTAS ===== */
+  function carregarFaltas() {
+    fetch(API + "?acao=faltas")
+      .then(r => r.json())
+      .then(d => {
+        listaFaltas.innerHTML = "";
+        d.forEach(f => {
+          listaFaltas.innerHTML += `
+            <tr>
+              <td>${f.professor}</td>
+              <td>${f.disciplina}</td>
+              <td>${f.data}</td>
+              <td>${f.motivo}</td>
+              <td>${f.substituto}</td>
+            </tr>
+          `;
+        });
+      });
+  }
+
+  /* ===== ADMIN ===== */
+  window.criarUsuario = function () {
+    const dados = {
+      acao: "criarUsuario",
+      usuario: novoUsuario.value,
+      senha: novaSenha.value,
+      perfil: novoPerfil.value,
+      nome: novoNome.value
+    };
+
+    fetch(API, {
+      method: "POST",
+      body: JSON.stringify(dados)
+    }).then(() => {
+      mostrarMsg("Usuário criado com sucesso!");
+      location.reload();
+    });
+  };
+
+});
+</script>
